@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, Clock, Calendar, TrendingUp, Search, Download } from 'lucide-react';
 
 export default function StaffDashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [selectedMonth, setSelectedMonth] = useState('');
     const [selectedYear, setSelectedYear] = useState('2024');
-    const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hoursData, setHoursData] = useState({
         totalHours: 0,
@@ -15,10 +14,26 @@ export default function StaffDashboard() {
     });
     const [timeEntries, setTimeEntries] = useState([]);
 
-    // === EDIT THESE WEBHOOK URLs FROM YOUR N8N ===
+    // 🔒 Static employees list
+    const EMPLOYEES = [
+        { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General' },
+        { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General' },
+        { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General' },
+        { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General' },
+        { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General' },
+        { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General' },
+        { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General' },
+        { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General' },
+        { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General' },
+        { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General' },
+        { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General' },
+        { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General' },
+        { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General' },
+        { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General' },
+    ];
+
+    // n8n webhook – only for hours calculation
     const N8N_WEBHOOKS = {
-        getEmployees: 'https://primary-production-191cf.up.railway.app/webhook/get-employees2',
-        getTimeEntries: 'https://primary-production-191cf.up.railway.app/webhook/GetEmployeeTimeEntries',
         calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
     };
 
@@ -29,56 +44,6 @@ export default function StaffDashboard() {
 
     const years = ['2024', '2025'];
 
-    // Fetch employees on component mount
-    useEffect(() => {
-        fetchEmployees();
-    }, []);
-
-    const fetchEmployees = async () => {
-        try {
-            const response = await fetch(N8N_WEBHOOKS.getEmployees);
-            const data = await response.json();
-
-            // Ensure we always get an array
-            const rawArray = Array.isArray(data)
-                ? data
-                : Array.isArray(data.employees)
-                    ? data.employees
-                    : data
-                        ? [data]
-                        : [];
-
-            // Normalize Airtable-style fields -> { id, name, role, department }
-            const employeeList = rawArray.map((emp, index) => ({
-                id: emp['Staff ID'] ?? emp.id ?? index,
-                name: emp.Name ?? emp.name ?? 'Unknown',
-                role: emp.Roll ?? emp.role ?? 'Staff',
-                department: emp.department ?? 'General',
-            }));
-
-            setEmployees(employeeList);
-        } catch (error) {
-            console.error('Error fetching employees:', error);
-            // Fallback to sample data if webhook fails
-            setEmployees([
-                { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General' },
-                { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General' },
-                { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General' },
-                { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General' },
-                { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General' },
-                { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General' },
-                { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General' },
-                { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General' },
-                { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General' },
-                { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General' },
-                { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General' },
-                { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General' },
-                { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General' },
-                { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General' },
-            ]);
-        }
-    };
-
     const calculateHours = async () => {
         if (!selectedEmployee || !selectedMonth || !selectedYear) {
             alert('Please select an employee, month, and year');
@@ -88,7 +53,6 @@ export default function StaffDashboard() {
         setLoading(true);
 
         try {
-            // Calculate start and end dates for the selected month
             const startDate = new Date(selectedYear, selectedMonth - 1, 1)
                 .toISOString()
                 .split('T')[0];
@@ -100,6 +64,7 @@ export default function StaffDashboard() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    // This will send the Staff ID (8–21)
                     employeeId: selectedEmployee,
                     startDate,
                     endDate
@@ -115,25 +80,22 @@ export default function StaffDashboard() {
                 overtimeHours: data.overtimeHours || 0
             });
 
-            // Ensure entries is always an array
             const entries = Array.isArray(data.entries) ? data.entries : [];
             setTimeEntries(entries);
         } catch (error) {
             console.error('Error calculating hours:', error);
-            alert('Failed to calculate hours. Check console for details.');
+            alert('Failed to calculate hours. Check console – likely a CORS issue from n8n.');
         } finally {
             setLoading(false);
         }
     };
 
-    // Function to generate and download CSV report
+    // CSV download
     const downloadCSVReport = () => {
-        const safeEmployees = Array.isArray(employees) ? employees : [];
-        const selectedEmp = safeEmployees.find(e => String(e.id) === String(selectedEmployee));
+        const selectedEmp = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
         const monthName = selectedMonth ? months[parseInt(selectedMonth) - 1] : 'N/A';
 
-        // CSV Header
         let csv = 'Staff Hours Report\n\n';
         csv += `Employee Name,${empName}\n`;
         csv += `Role,${selectedEmp ? selectedEmp.role : 'N/A'}\n`;
@@ -149,13 +111,10 @@ export default function StaffDashboard() {
         csv += 'Date,Clock In,Clock Out,Break Time,Total Hours,Adjusted Hours,Notes\n';
 
         const safeEntries = Array.isArray(timeEntries) ? timeEntries : [];
-
-        // Add time entries
         safeEntries.forEach(entry => {
             csv += `${entry.date},${entry.clockIn},${entry.clockOut},${entry.breakTime},${entry.totalHours},,\n`;
         });
 
-        // Create blob and download
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -170,13 +129,9 @@ export default function StaffDashboard() {
         document.body.removeChild(link);
     };
 
-    // Helper to get selected employee object
-    const getSelectedEmployeeData = () => {
-        const safeEmployees = Array.isArray(employees) ? employees : [];
-        return safeEmployees.find(e => String(e.id) === String(selectedEmployee));
-    };
+    const getSelectedEmployeeData = () =>
+        EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
 
-    const safeEmployees = Array.isArray(employees) ? employees : [];
     const safeTimeEntries = Array.isArray(timeEntries) ? timeEntries : [];
 
     return (
@@ -211,7 +166,7 @@ export default function StaffDashboard() {
                                 className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             >
                                 <option value="">Select an employee...</option>
-                                {safeEmployees.map(emp => (
+                                {EMPLOYEES.map(emp => (
                                     <option key={emp.id} value={emp.id}>
                                         {emp.name}
                                     </option>
