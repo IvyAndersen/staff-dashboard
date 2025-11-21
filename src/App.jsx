@@ -39,32 +39,42 @@ export default function StaffDashboard() {
             const response = await fetch(N8N_WEBHOOKS.getEmployees);
             const data = await response.json();
 
-            // Make sure we always end up with an array
-            const employeeList = Array.isArray(data)
+            // Ensure we always get an array
+            const rawArray = Array.isArray(data)
                 ? data
                 : Array.isArray(data.employees)
                     ? data.employees
-                    : [];
+                    : data
+                        ? [data]
+                        : [];
+
+            // Normalize Airtable-style fields -> { id, name, role, department }
+            const employeeList = rawArray.map((emp, index) => ({
+                id: emp['Staff ID'] ?? emp.id ?? index,
+                name: emp.Name ?? emp.name ?? 'Unknown',
+                role: emp.Roll ?? emp.role ?? 'Staff',
+                department: emp.department ?? 'General',
+            }));
 
             setEmployees(employeeList);
         } catch (error) {
             console.error('Error fetching employees:', error);
             // Fallback to sample data if webhook fails
             setEmployees([
-                { id: 1, name: 'Elzbieta Karpinska', role: 'Staff', department: 'General' },
-                { id: 2, name: 'Bohdan Zavhorodnii', role: 'Staff', department: 'General' },
-                { id: 3, name: 'Lotte Bruin', role: 'Staff', department: 'General' },
-                { id: 4, name: 'Steffen Bjerk', role: 'Staff', department: 'General' },
-                { id: 5, name: 'Helene Göpfert', role: 'Staff', department: 'General' },
-                { id: 6, name: 'Michelle Pavan', role: 'Staff', department: 'General' },
-                { id: 7, name: 'Annabelle Cazals', role: 'Staff', department: 'General' },
-                { id: 8, name: 'Julia Gasser', role: 'Staff', department: 'General' },
-                { id: 9, name: 'Marit Jonsdotter Gåsvatn', role: 'Staff', department: 'General' },
-                { id: 10, name: 'Oliver heszlein-lossius.', role: 'Staff', department: 'General' },
-                { id: 11, name: 'Gustav James Myklestad Barrett', role: 'Staff', department: 'General' },
-                { id: 12, name: 'Joel Rimu Laurance', role: 'Staff', department: 'General' },
-                { id: 13, name: 'Yericka Italia Ruggeri', role: 'Staff', department: 'General' },
-                { id: 14, name: 'Victoria Tamas', role: 'Staff', department: 'General' },
+                { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General' },
+                { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General' },
+                { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General' },
+                { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General' },
+                { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General' },
+                { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General' },
+                { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General' },
+                { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General' },
+                { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General' },
+                { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General' },
+                { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General' },
+                { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General' },
+                { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General' },
+                { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General' },
             ]);
         }
     };
@@ -119,7 +129,7 @@ export default function StaffDashboard() {
     // Function to generate and download CSV report
     const downloadCSVReport = () => {
         const safeEmployees = Array.isArray(employees) ? employees : [];
-        const selectedEmp = safeEmployees.find(e => e.id === parseInt(selectedEmployee));
+        const selectedEmp = safeEmployees.find(e => String(e.id) === String(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
         const monthName = selectedMonth ? months[parseInt(selectedMonth) - 1] : 'N/A';
 
@@ -163,7 +173,7 @@ export default function StaffDashboard() {
     // Helper to get selected employee object
     const getSelectedEmployeeData = () => {
         const safeEmployees = Array.isArray(employees) ? employees : [];
-        return safeEmployees.find(e => e.id === parseInt(selectedEmployee));
+        return safeEmployees.find(e => String(e.id) === String(selectedEmployee));
     };
 
     const safeEmployees = Array.isArray(employees) ? employees : [];
