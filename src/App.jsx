@@ -6,17 +6,21 @@ export default function StaffDashboard() {
     const [selectedMonth, setSelectedMonth] = useState('');
     const [selectedYear, setSelectedYear] = useState('2025'); 
     const [loading, setLoading] = useState(false);
+    
+    // Stats state
     const [hoursData, setHoursData] = useState({
         totalHours: 0,
         workDays: 0,
         avgHoursPerDay: 0,
         overtimeHours: 0
     });
+    
+    // Table data state
     const [timeEntries, setTimeEntries] = useState([]);
 
     // 🔒 Static employees list
-    // NOTE: If n8n uses Airtable Record IDs (e.g., "rec..."), replace these numbers with those IDs.
-    // Otherwise, we will send the 'name' to n8n to filter by name.
+    // IMPORTANT: Ensure the ID here matches what n8n expects (Airtable Record ID or Int)
+    // If n8n searches by Name, these IDs are just for React's internal selection.
     const EMPLOYEES = [
         { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General' },
         { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General' },
@@ -45,11 +49,10 @@ export default function StaffDashboard() {
 
     const years = ['2024', '2025'];
 
-    // Helper to format ISO string to HH:MM
+    // Helper to format ISO string (2025-11-11T07:25...) to HH:MM
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
         try {
-            // Takes 2025-11-11T07:25:43.466Z and returns 07:25
             return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
         } catch (e) {
             return isoString;
@@ -63,12 +66,11 @@ export default function StaffDashboard() {
         }
 
         setLoading(true);
-        // Reset data while loading
+        // Reset UI
         setHoursData({ totalHours: 0, workDays: 0, avgHoursPerDay: 0, overtimeHours: 0 });
         setTimeEntries([]);
 
         try {
-            // 1. Prepare Dates
             const startDate = new Date(selectedYear, selectedMonth - 1, 1)
                 .toISOString()
                 .split('T')[0];
@@ -76,41 +78,46 @@ export default function StaffDashboard() {
                 .toISOString()
                 .split('T')[0];
 
-            // 2. Find Employee Name
+            // Get Employee Name to send to n8n (useful if IDs don't match)
             const empObj = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
-            
-            console.log(`Fetching for: ${empObj.name} (ID: ${selectedEmployee}) from ${startDate} to ${endDate}`);
 
-            // 3. Call n8n
+            console.log(`Fetching data for ${empObj.name}...`);
+
             const response = await fetch(N8N_WEBHOOKS.calculateHours, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    employeeId: selectedEmployee, // Sends '10'
-                    employeeName: empObj ? empObj.name : '', // Sends 'Lotte Bruin' (USE THIS IN N8N IF ID FAILS)
+                    employeeId: selectedEmployee,
+                    employeeName: empObj ? empObj.name : '',
                     startDate,
                     endDate
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
             const rawData = await response.json();
-            console.log("📦 Raw Data received from n8n:", rawData);
+            console.log("📦 Data from n8n:", rawData);
 
-            // 4. Process Data
-            if (Array.isArray(rawData) && rawData.length > 0) {
-                
-                // --- Statistics Calculation ---
-                const totalHours = rawData.reduce((sum, item) => sum + (item.actualHours || 0), 0);
-                const workDays = rawData.length;
+            // 🛠️ HANDLE DATA FORMAT (Array vs Single Object)
+            let dataList = [];
+            
+            if (Array.isArray(rawData)) {
+                dataList = rawData;
+            } else if (rawData && typeof rawData === 'object') {
+                // If n8n returns a single object (one record), wrap it in an array
+                dataList = [rawData];
+            }
+
+            if (dataList.length > 0) {
+                // 1. Calculate Statistics on the client side
+                const totalHours = dataList.reduce((sum, item) => sum + (Number(item.actualHours) || 0), 0);
+                const workDays = dataList.length;
                 const avgHoursPerDay = workDays > 0 ? (totalHours / workDays) : 0;
                 
-                // Sum 'diffHours' only if positive (assuming diffHours is overtime)
-                const overtimeHours = rawData.reduce((sum, item) => {
-                    const diff = item.diffHours || 0;
+                // Calculate Overtime (Sum positive 'diffHours')
+                const overtimeHours = dataList.reduce((sum, item) => {
+                    const diff = Number(item.diffHours) || 0;
                     return sum + (diff > 0 ? diff : 0);
                 }, 0);
 
@@ -121,33 +128,33 @@ export default function StaffDashboard() {
                     overtimeHours: parseFloat(overtimeHours.toFixed(2))
                 });
 
-                // --- Table Data Mapping ---
-                const formattedEntries = rawData.map(item => ({
+                // 2. Map JSON keys to Table Rows
+                const formattedEntries = dataList.map(item => ({
                     date: item.Date,
                     clockIn: formatTime(item['Clock In']),
                     clockOut: formatTime(item['Clock Out']),
                     breakTime: item['Break Duration'] ? `${item['Break Duration']} min` : '0 min',
-                    totalHours: item.actualHours?.toFixed(2) || '0.00',
+                    totalHours: Number(item.actualHours).toFixed(2),
                     notes: item.shiftName || '' 
                 }));
 
-                // Sort Newest -> Oldest
+                // Sort by Date (Newest first)
                 formattedEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
                 setTimeEntries(formattedEntries);
             } else {
-                console.warn("⚠️ n8n returned an empty array. Check if n8n is filtering by ID '10' instead of Name 'Lotte Bruin'.");
-                alert("Connection successful, but no records found. \n\nCheck Console (F12) for details. \nLikely cause: n8n filter needs to match Employee Name, not ID.");
+                console.warn("Valid connection, but received empty list.");
             }
 
         } catch (error) {
-            console.error('❌ Error calculating hours:', error);
-            alert('Failed to fetch data. Check Console for CORS or Network errors.');
+            console.error('Error calculating hours:', error);
+            alert('Error fetching data. Check console for details.');
         } finally {
             setLoading(false);
         }
     };
 
+    // CSV download
     const downloadCSVReport = () => {
         const selectedEmp = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
@@ -161,21 +168,23 @@ export default function StaffDashboard() {
         csv += 'Summary\n';
         csv += `Total Hours Worked,${hoursData.totalHours}\n`;
         csv += `Work Days,${hoursData.workDays}\n`;
+        csv += `Average Hours per Day,${hoursData.avgHoursPerDay}\n`;
         csv += `Overtime Hours,${hoursData.overtimeHours}\n\n`;
 
         csv += 'Date,Clock In,Clock Out,Break,Total Hours,Shift\n';
 
-        const safeEntries = Array.isArray(timeEntries) ? timeEntries : [];
-        safeEntries.forEach(entry => {
+        timeEntries.forEach(entry => {
             csv += `${entry.date},${entry.clockIn},${entry.clockOut},${entry.breakTime},${entry.totalHours},${entry.notes}\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `report_${empName.replace(' ', '_')}.csv`);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `report_${empName.replace(' ', '_')}_${selectedYear}.csv`;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     };
 
     const getSelectedEmployeeData = () =>
@@ -202,6 +211,7 @@ export default function StaffDashboard() {
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Employee Selector */}
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Employee</label>
                             <select
@@ -216,6 +226,7 @@ export default function StaffDashboard() {
                             </select>
                         </div>
 
+                        {/* Month Selector */}
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Month</label>
                             <select
@@ -230,6 +241,7 @@ export default function StaffDashboard() {
                             </select>
                         </div>
 
+                        {/* Year Selector */}
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Year</label>
                             <select
@@ -244,6 +256,7 @@ export default function StaffDashboard() {
                         </div>
                     </div>
 
+                    {/* Buttons */}
                     <div className="flex gap-3 mt-6">
                         <button
                             onClick={calculateHours}
@@ -273,7 +286,6 @@ export default function StaffDashboard() {
                         <p className="text-4xl font-bold text-white mb-1">{hoursData.totalHours}</p>
                         <p className="text-blue-100 text-sm">Hours Worked</p>
                     </div>
-
                     <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 shadow-xl">
                         <div className="flex items-center justify-between mb-2">
                             <Calendar className="w-8 h-8 text-white/80" />
@@ -282,7 +294,6 @@ export default function StaffDashboard() {
                         <p className="text-4xl font-bold text-white mb-1">{hoursData.workDays}</p>
                         <p className="text-purple-100 text-sm">Work Days</p>
                     </div>
-
                     <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 shadow-xl">
                         <div className="flex items-center justify-between mb-2">
                             <TrendingUp className="w-8 h-8 text-white/80" />
@@ -291,7 +302,6 @@ export default function StaffDashboard() {
                         <p className="text-4xl font-bold text-white mb-1">{hoursData.avgHoursPerDay}</p>
                         <p className="text-emerald-100 text-sm">Hours per Day</p>
                     </div>
-
                     <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-2xl p-6 shadow-xl">
                         <div className="flex items-center justify-between mb-2">
                             <Clock className="w-8 h-8 text-white/80" />
@@ -353,7 +363,7 @@ export default function StaffDashboard() {
                                 ) : (
                                     <tr>
                                         <td colSpan="6" className="py-8 text-center text-slate-500">
-                                            {loading ? 'Loading...' : 'No data available for selected period.'}
+                                            {loading ? 'Loading data...' : 'No time entries found for this period.'}
                                         </td>
                                     </tr>
                                 )}
