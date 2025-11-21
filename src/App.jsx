@@ -145,110 +145,348 @@ export default function StaffDashboard() {
         }
     };
 
-    const downloadCSVReport = () => {
+    const downloadPDFReport = () => {
         const selectedEmp = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
         const monthName = months[parseInt(selectedMonth) - 1];
-        const currentDate = new Date().toLocaleString('en-US', { 
+        const currentDate = new Date().toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'long', 
-            day: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit' 
+            day: 'numeric'
         });
-        
-        // Create a professional, well-formatted CSV
-        let csv = '';
-        
-        // Header Section with Company Branding
-        csv += '═══════════════════════════════════════════════════════════\n';
-        csv += '                   STAFF HOURS REPORT                      \n';
-        csv += '═══════════════════════════════════════════════════════════\n\n';
-        
-        // Employee Information Section
-        csv += '┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ EMPLOYEE INFORMATION                                    │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        csv += `Name:,${empName}\n`;
-        csv += `Role:,${selectedEmp?.role || 'N/A'}\n`;
-        csv += `Department:,${selectedEmp?.department || 'N/A'}\n`;
-        csv += `Employee ID:,${selectedEmployee}\n\n`;
-        
-        // Report Period Section
-        csv += '┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ REPORT PERIOD                                           │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        csv += `Month:,${monthName} ${selectedYear}\n`;
-        csv += `Generated:,${currentDate}\n\n`;
-        
-        // Summary Statistics Section
-        csv += '┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ SUMMARY STATISTICS                                      │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        csv += 'Metric,Value,Unit\n';
-        csv += `Total Hours Worked,${stats.totalHoursFormatted.replace(' hrs', 'h').replace(' min', 'm')},\n`;
-        csv += `Planned Hours,${stats.totalPlannedHours},hours\n`;
-        csv += `Overtime/Undertime,${stats.overtimeHours > 0 ? '+' : ''}${stats.overtimeHours},hours\n`;
-        csv += `Work Days,${stats.workDays},days\n`;
-        csv += `Average Shift Duration,${stats.averageShiftDuration},hours\n`;
-        csv += `Total Break Time,${stats.totalBreakHours},hours\n\n`;
-        
-        // Performance Indicators
-        csv += '┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ PERFORMANCE INDICATORS                                  │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        const attendanceRate = stats.workDays > 0 ? 100 : 0;
-        const complianceRate = stats.totalPlannedHours > 0 
-            ? ((stats.totalPlannedHours - Math.abs(stats.overtimeHours)) / stats.totalPlannedHours * 100).toFixed(1)
-            : 0;
-        csv += `Attendance Rate,${attendanceRate}%,\n`;
-        csv += `Schedule Compliance,${complianceRate}%,\n`;
-        csv += `Status,${stats.overtimeHours >= 0 ? 'On Target' : 'Below Target'},\n\n`;
 
-        // Detailed Time Entries Section
-        csv += '┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ DETAILED TIME ENTRIES                                   │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        csv += 'Date,Day of Week,Shift Type,Clock In,Clock Out,Break (h),Planned (h),Actual (h),Difference (h),Status\n';
-
-        timeEntries.forEach(entry => {
-            const date = new Date(entry.date);
-            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-            const diff = parseFloat(entry.difference);
-            const status = diff > 0 ? 'Overtime' : diff < 0 ? 'Undertime' : 'On Time';
-            
-            csv += `${entry.date},${dayOfWeek},${entry.shiftName},${entry.clockIn},${entry.clockOut},${entry.breakHours},${entry.plannedHours},${entry.actualHours},${diff > 0 ? '+' : ''}${entry.difference},${status}\n`;
-        });
+        // Create a new window with the report
+        const printWindow = window.open('', '_blank');
         
-        // Footer Section
-        csv += '\n┌─────────────────────────────────────────────────────────┐\n';
-        csv += '│ NOTES & OBSERVATIONS                                    │\n';
-        csv += '└─────────────────────────────────────────────────────────┘\n';
-        
-        if (stats.overtimeHours > 2) {
-            csv += `• Employee has accumulated ${stats.overtimeHours} hours of overtime\n`;
-        } else if (stats.overtimeHours < -2) {
-            csv += `• Employee is ${Math.abs(stats.overtimeHours)} hours below scheduled time\n`;
-        } else {
-            csv += '• Employee hours are within expected range\n';
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Report - ${empName}</title>
+    <style>
+        @media print {
+            @page { margin: 1.5cm; size: A4; }
+            body { margin: 0; }
+            .no-print { display: none; }
         }
         
-        if (stats.averageShiftDuration > 8) {
-            csv += `• Average shift duration (${stats.averageShiftDuration}h) exceeds standard 8 hours\n`;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: #f5f5f5;
         }
         
-        csv += '\n═══════════════════════════════════════════════════════════\n';
-        csv += '           Report generated by Staff Management System      \n';
-        csv += '═══════════════════════════════════════════════════════════\n';
-
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Staff_Report_${empName.replace(/\s+/g, '_')}_${monthName}_${selectedYear}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        .report-container {
+            background: white;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .info-box h3 {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .info-box .value {
+            font-size: 16px;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-card .label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .stat-card .unit {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        
+        .stat-card.highlight {
+            background: #dbeafe;
+            border-color: #2563eb;
+        }
+        
+        .stat-card.highlight .value {
+            color: #2563eb;
+        }
+        
+        .stat-card.positive .value {
+            color: #059669;
+        }
+        
+        .stat-card.negative .value {
+            color: #dc2626;
+        }
+        
+        .table-section {
+            margin-top: 30px;
+        }
+        
+        .table-section h2 {
+            font-size: 16px;
+            color: #1e293b;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        
+        thead {
+            background: #f1f5f9;
+        }
+        
+        th {
+            text-align: left;
+            padding: 10px 8px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.3px;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        .shift-badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .diff-positive { color: #059669; font-weight: 600; }
+        .diff-negative { color: #dc2626; font-weight: 600; }
+        .diff-neutral { color: #64748b; }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 11px;
+        }
+        
+        .no-print {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+        }
+        
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-secondary {
+            background: #64748b;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <h1>Staff Hours Report</h1>
+            <div class="subtitle">${monthName} ${selectedYear}</div>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-box">
+                <h3>Employee</h3>
+                <div class="value">${empName}</div>
+            </div>
+            <div class="info-box">
+                <h3>Role</h3>
+                <div class="value">${selectedEmp?.role || 'N/A'}</div>
+            </div>
+            <div class="info-box">
+                <h3>Report Date</h3>
+                <div class="value">${currentDate}</div>
+            </div>
+            <div class="info-box">
+                <h3>Period</h3>
+                <div class="value">${monthName} ${selectedYear}</div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card highlight">
+                <div class="label">Total Hours</div>
+                <div class="value">${stats.totalHoursFormatted}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Planned</div>
+                <div class="value">${stats.totalPlannedHours}</div>
+                <div class="unit">hours</div>
+            </div>
+            <div class="stat-card ${stats.overtimeHours >= 0 ? 'positive' : 'negative'}">
+                <div class="label">Difference</div>
+                <div class="value">${stats.overtimeHours > 0 ? '+' : ''}${stats.overtimeHours}h</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Work Days</div>
+                <div class="value">${stats.workDays}</div>
+                <div class="unit">days</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Shift</div>
+                <div class="value">${stats.averageShiftDuration}</div>
+                <div class="unit">hours</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Breaks</div>
+                <div class="value">${stats.totalBreakHours}</div>
+                <div class="unit">hours</div>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <h2>Time Entries</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Shift</th>
+                        <th>Clock In</th>
+                        <th>Clock Out</th>
+                        <th>Break</th>
+                        <th>Actual</th>
+                        <th>Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${timeEntries.map(entry => {
+                        const diff = parseFloat(entry.difference);
+                        const diffClass = diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : 'diff-neutral';
+                        return `
+                        <tr>
+                            <td>${entry.date}</td>
+                            <td><span class="shift-badge">${entry.shiftName}</span></td>
+                            <td>${entry.clockIn}</td>
+                            <td>${entry.clockOut}</td>
+                            <td>${entry.breakHours}h</td>
+                            <td><strong>${entry.actualHours}h</strong></td>
+                            <td class="${diffClass}">${diff > 0 ? '+' : ''}${entry.difference}h</td>
+                        </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            Generated by Staff Management System
+        </div>
+    </div>
+    
+    <div class="no-print">
+        <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+        <button class="btn btn-secondary" onclick="window.close()">Close</button>
+    </div>
+</body>
+</html>
+        `;
+        
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
     };
 
     const getSelectedEmployeeData = () =>
@@ -355,12 +593,12 @@ export default function StaffDashboard() {
                             )}
                         </button>
                         <button 
-                            onClick={downloadCSVReport}
+                            onClick={downloadPDFReport}
                             disabled={timeEntries.length === 0}
                             className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                             <Download className="w-5 h-5" />
-                            Export CSV Report
+                            Download PDF Report
                         </button>
                     </div>
                 </div>
@@ -463,37 +701,42 @@ export default function StaffDashboard() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
-                                <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
-                                    <th className="py-3 px-4 font-semibold">Date</th>
-                                    <th className="py-3 px-4 font-semibold">Shift</th>
-                                    <th className="py-3 px-4 font-semibold">Clock In</th>
-                                    <th className="py-3 px-4 font-semibold">Clock Out</th>
-                                    <th className="py-3 px-4 font-semibold">Break</th>
-                                    <th className="py-3 px-4 font-semibold">Planned</th>
-                                    <th className="py-3 px-4 font-semibold">Actual</th>
-                                    <th className="py-3 px-4 font-semibold text-right">Diff</th>
+                                <tr className="border-b border-slate-700">
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Date</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Shift</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Clock In</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Clock Out</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Break</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Planned</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Actual</th>
+                                    <th className="py-3 px-4 text-slate-400 text-xs uppercase tracking-wider font-semibold text-right">Diff</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-slate-300">
+                            <tbody>
                                 {timeEntries.length > 0 ? (
-                                    timeEntries.map((entry, idx) => (
-                                        <tr key={idx} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                                            <td className="py-3 px-4 text-white font-medium">{entry.date}</td>
-                                            <td className="py-3 px-4">
-                                                <span className="bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
-                                                    {entry.shiftName}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 font-mono text-sm">{entry.clockIn}</td>
-                                            <td className="py-3 px-4 font-mono text-sm">{entry.clockOut}</td>
-                                            <td className="py-3 px-4">{entry.breakHours}h</td>
-                                            <td className="py-3 px-4">{entry.plannedHours}h</td>
-                                            <td className="py-3 px-4 text-emerald-400 font-semibold">{entry.actualHours}h</td>
-                                            <td className={`py-3 px-4 text-right font-bold ${getDifferenceColor(entry.difference)}`}>
-                                                {parseFloat(entry.difference) > 0 ? '+' : ''}{entry.difference}h
-                                            </td>
-                                        </tr>
-                                    ))
+                                    timeEntries.map((entry, idx) => {
+                                        const diff = parseFloat(entry.difference);
+                                        const diffColor = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-400';
+                                        
+                                        return (
+                                            <tr key={idx} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
+                                                <td className="py-3 px-4 text-white font-medium">{entry.date}</td>
+                                                <td className="py-3 px-4">
+                                                    <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
+                                                        {entry.shiftName}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-slate-300 font-mono text-sm">{entry.clockIn}</td>
+                                                <td className="py-3 px-4 text-slate-300 font-mono text-sm">{entry.clockOut}</td>
+                                                <td className="py-3 px-4 text-slate-300">{entry.breakHours}h</td>
+                                                <td className="py-3 px-4 text-slate-300">{entry.plannedHours}h</td>
+                                                <td className="py-3 px-4 text-emerald-400 font-semibold">{entry.actualHours}h</td>
+                                                <td className={`py-3 px-4 text-right font-bold ${diffColor}`}>
+                                                    {diff > 0 ? '+' : ''}{entry.difference}h
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
                                         <td colSpan="8" className="py-12 text-center">
