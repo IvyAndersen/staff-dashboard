@@ -7,7 +7,7 @@ export default function StaffDashboard() {
     const [selectedYear, setSelectedYear] = useState('2025'); 
     const [loading, setLoading] = useState(false);
     
-    // Updated State to match your new JSON structure
+    // Stats state
     const [stats, setStats] = useState({
         totalHoursFormatted: '0 hrs 0 min',
         totalPlannedHours: 0,
@@ -48,7 +48,6 @@ export default function StaffDashboard() {
 
     const years = ['2024', '2025'];
 
-    // Helper: Format ISO string to HH:MM
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
         try {
@@ -58,7 +57,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // Helper: Shorten "85 hours 12 minutes" to "85 hrs 12 min"
     const shortenDuration = (str) => {
         if (!str) return '0 hrs 0 min';
         return str.replace('hours', 'hrs').replace('minutes', 'min');
@@ -104,11 +102,17 @@ export default function StaffDashboard() {
             const rawData = await response.json();
             console.log("📦 Data from n8n:", rawData);
 
-            // 🛠️ Parsing Logic for the new JSON Structure
-            // The API returns an array with one object containing the summary
-            if (Array.isArray(rawData) && rawData.length > 0) {
-                const summary = rawData[0]; // Get the first item
+            // 🛠️ FIX: Handle both Object (your current case) and Array (just in case)
+            let summary = rawData;
+            if (Array.isArray(rawData)) {
+                if (rawData.length > 0) {
+                    summary = rawData[0];
+                } else {
+                    summary = null;
+                }
+            }
 
+            if (summary) {
                 setStats({
                     totalHoursFormatted: shortenDuration(summary.totalHoursFormatted),
                     totalPlannedHours: summary.totalPlannedHours || 0,
@@ -118,23 +122,21 @@ export default function StaffDashboard() {
                     totalBreakHours: summary.totalBreakHours || 0
                 });
 
-                // Map entries for the table
                 const entries = Array.isArray(summary.entries) ? summary.entries : [];
                 const formattedEntries = entries.map(item => ({
                     date: item.date,
                     clockIn: formatTime(item.clockIn),
                     clockOut: formatTime(item.clockOut),
                     shiftName: item.shiftName,
-                    breakHours: item.breakHours, // Display as decimal hours (e.g. 0.5)
+                    breakHours: item.breakHours,
                     plannedHours: item.plannedHours,
                     actualHours: item.actualHours
                 }));
 
-                // Sort by Date (Newest first)
                 formattedEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
                 setTimeEntries(formattedEntries);
             } else {
-                console.warn("Valid connection, but received empty list.");
+                console.warn("Received empty data structure.");
             }
 
         } catch (error) {
@@ -245,7 +247,7 @@ export default function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* 📊 STATS GRID - 6 ITEMS */}
+                {/* 📊 STATS GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     
                     {/* 1. Total Hours Worked */}
@@ -268,7 +270,7 @@ export default function StaffDashboard() {
                         <p className="text-slate-400 text-sm">Expected schedule</p>
                     </div>
 
-                    {/* 3. Overtime / Undertime (Conditional Color) */}
+                    {/* 3. Overtime / Undertime */}
                     <div className="bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700">
                         <div className="flex items-center justify-between mb-2">
                             <AlertCircle className={`w-8 h-8 ${stats.overtimeHours >= 0 ? 'text-emerald-400' : 'text-rose-400'}`} />
