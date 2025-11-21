@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, Calendar, TrendingUp, Search, Download, FileText } from 'lucide-react';
+import { Users, Clock, Calendar, TrendingUp, Search, Download } from 'lucide-react';
 
 export default function StaffDashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -21,6 +21,7 @@ export default function StaffDashboard() {
         getTimeEntries: 'https://primary-production-191cf.up.railway.app/webhook/GetEmployeeTimeEntries',
         calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
     };
+
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -37,7 +38,15 @@ export default function StaffDashboard() {
         try {
             const response = await fetch(N8N_WEBHOOKS.getEmployees);
             const data = await response.json();
-            setEmployees(data);
+
+            // Make sure we always end up with an array
+            const employeeList = Array.isArray(data)
+                ? data
+                : Array.isArray(data.employees)
+                    ? data.employees
+                    : [];
+
+            setEmployees(employeeList);
         } catch (error) {
             console.error('Error fetching employees:', error);
             // Fallback to sample data if webhook fails
@@ -70,8 +79,12 @@ export default function StaffDashboard() {
 
         try {
             // Calculate start and end dates for the selected month
-            const startDate = new Date(selectedYear, selectedMonth - 1, 1).toISOString().split('T')[0];
-            const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+            const startDate = new Date(selectedYear, selectedMonth - 1, 1)
+                .toISOString()
+                .split('T')[0];
+            const endDate = new Date(selectedYear, selectedMonth, 0)
+                .toISOString()
+                .split('T')[0];
 
             const response = await fetch(N8N_WEBHOOKS.calculateHours, {
                 method: 'POST',
@@ -84,13 +97,17 @@ export default function StaffDashboard() {
             });
 
             const data = await response.json();
+
             setHoursData({
                 totalHours: data.totalHours || 0,
                 workDays: data.workDays || 0,
                 avgHoursPerDay: data.avgHoursPerDay || 0,
                 overtimeHours: data.overtimeHours || 0
             });
-            setTimeEntries(data.entries || []);
+
+            // Ensure entries is always an array
+            const entries = Array.isArray(data.entries) ? data.entries : [];
+            setTimeEntries(entries);
         } catch (error) {
             console.error('Error calculating hours:', error);
             alert('Failed to calculate hours. Check console for details.');
@@ -101,7 +118,8 @@ export default function StaffDashboard() {
 
     // Function to generate and download CSV report
     const downloadCSVReport = () => {
-        const selectedEmp = employees.find(e => e.id === parseInt(selectedEmployee));
+        const safeEmployees = Array.isArray(employees) ? employees : [];
+        const selectedEmp = safeEmployees.find(e => e.id === parseInt(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
         const monthName = selectedMonth ? months[parseInt(selectedMonth) - 1] : 'N/A';
 
@@ -120,8 +138,10 @@ export default function StaffDashboard() {
 
         csv += 'Date,Clock In,Clock Out,Break Time,Total Hours,Adjusted Hours,Notes\n';
 
+        const safeEntries = Array.isArray(timeEntries) ? timeEntries : [];
+
         // Add time entries
-        timeEntries.forEach(entry => {
+        safeEntries.forEach(entry => {
             csv += `${entry.date},${entry.clockIn},${entry.clockOut},${entry.breakTime},${entry.totalHours},,\n`;
         });
 
@@ -130,7 +150,10 @@ export default function StaffDashboard() {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `staff_report_${empName.replace(' ', '_')}_${monthName}_${selectedYear}.csv`);
+        link.setAttribute(
+            'download',
+            `staff_report_${empName.replace(' ', '_')}_${monthName}_${selectedYear}.csv`
+        );
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -139,8 +162,12 @@ export default function StaffDashboard() {
 
     // Helper to get selected employee object
     const getSelectedEmployeeData = () => {
-        return employees.find(e => e.id === parseInt(selectedEmployee));
+        const safeEmployees = Array.isArray(employees) ? employees : [];
+        return safeEmployees.find(e => e.id === parseInt(selectedEmployee));
     };
+
+    const safeEmployees = Array.isArray(employees) ? employees : [];
+    const safeTimeEntries = Array.isArray(timeEntries) ? timeEntries : [];
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
@@ -155,7 +182,6 @@ export default function StaffDashboard() {
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto space-y-6">
-
                 {/* Selection Panel */}
                 <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 shadow-xl">
                     <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -175,8 +201,10 @@ export default function StaffDashboard() {
                                 className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             >
                                 <option value="">Select an employee...</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                {safeEmployees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {emp.name}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -193,7 +221,9 @@ export default function StaffDashboard() {
                             >
                                 <option value="">Select month...</option>
                                 {months.map((month, idx) => (
-                                    <option key={idx} value={idx + 1}>{month}</option>
+                                    <option key={idx} value={idx + 1}>
+                                        {month}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -209,7 +239,9 @@ export default function StaffDashboard() {
                                 className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             >
                                 {years.map(year => (
-                                    <option key={year} value={year}>{year}</option>
+                                    <option key={year} value={year}>
+                                        {year}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -287,15 +319,21 @@ export default function StaffDashboard() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <p className="text-slate-400 text-sm mb-1">Name</p>
-                                <p className="text-white font-medium text-lg">{getSelectedEmployeeData().name}</p>
+                                <p className="text-white font-medium text-lg">
+                                    {getSelectedEmployeeData().name}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-sm mb-1">Role</p>
-                                <p className="text-white font-medium text-lg">{getSelectedEmployeeData().role}</p>
+                                <p className="text-white font-medium text-lg">
+                                    {getSelectedEmployeeData().role}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-sm mb-1">Department</p>
-                                <p className="text-white font-medium text-lg">{getSelectedEmployeeData().department}</p>
+                                <p className="text-white font-medium text-lg">
+                                    {getSelectedEmployeeData().department}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -308,28 +346,46 @@ export default function StaffDashboard() {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-slate-700">
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Date</th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Clock In</th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Clock Out</th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Break</th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Total Hours</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
+                                        Date
+                                    </th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
+                                        Clock In
+                                    </th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
+                                        Clock Out
+                                    </th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
+                                        Break
+                                    </th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
+                                        Total Hours
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {timeEntries.map((entry, idx) => (
-                                    <tr key={idx} className={`${idx < timeEntries.length - 1 ? 'border-b border-slate-700/50' : ''} hover:bg-slate-700/30`}>
+                                {safeTimeEntries.map((entry, idx) => (
+                                    <tr
+                                        key={idx}
+                                        className={`${
+                                            idx < safeTimeEntries.length - 1
+                                                ? 'border-b border-slate-700/50'
+                                                : ''
+                                        } hover:bg-slate-700/30`}
+                                    >
                                         <td className="py-3 px-4 text-white">{entry.date}</td>
                                         <td className="py-3 px-4 text-slate-300">{entry.clockIn}</td>
                                         <td className="py-3 px-4 text-slate-300">{entry.clockOut}</td>
                                         <td className="py-3 px-4 text-slate-300">{entry.breakTime}</td>
-                                        <td className="py-3 px-4 text-emerald-400 font-semibold">{entry.totalHours} hrs</td>
+                                        <td className="py-3 px-4 text-emerald-400 font-semibold">
+                                            {entry.totalHours} hrs
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
         </div>
     );
