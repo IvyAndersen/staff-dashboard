@@ -4,7 +4,7 @@ import { Users, Clock, Calendar, TrendingUp, Search, Download } from 'lucide-rea
 export default function StaffDashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [selectedMonth, setSelectedMonth] = useState('');
-    const [selectedYear, setSelectedYear] = useState('2024');
+    const [selectedYear, setSelectedYear] = useState('2025'); // Default to 2025 based on your JSON
     const [loading, setLoading] = useState(false);
     const [hoursData, setHoursData] = useState({
         totalHours: 0,
@@ -32,7 +32,6 @@ export default function StaffDashboard() {
         { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General' },
     ];
 
-    // n8n webhook – only for hours calculation
     const N8N_WEBHOOKS = {
         calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
     };
@@ -43,6 +42,16 @@ export default function StaffDashboard() {
     ];
 
     const years = ['2024', '2025'];
+
+    // Helper to format ISO string to HH:MM
+    const formatTime = (isoString) => {
+        if (!isoString) return '--:--';
+        try {
+            return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } catch (e) {
+            return isoString;
+        }
+    };
 
     const calculateHours = async () => {
         if (!selectedEmployee || !selectedMonth || !selectedYear) {
@@ -64,27 +73,57 @@ export default function StaffDashboard() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // This will send the Staff ID (8–21)
                     employeeId: selectedEmployee,
                     startDate,
                     endDate
                 })
             });
 
-            const data = await response.json();
+            const rawData = await response.json();
 
-            setHoursData({
-                totalHours: data.totalHours || 0,
-                workDays: data.workDays || 0,
-                avgHoursPerDay: data.avgHoursPerDay || 0,
-                overtimeHours: data.overtimeHours || 0
-            });
+            // 🛠️ Updated Logic for Raw Array Response
+            if (Array.isArray(rawData)) {
+                // 1. Calculate Statistics
+                const totalHours = rawData.reduce((sum, item) => sum + (item.actualHours || 0), 0);
+                const workDays = rawData.length;
+                const avgHoursPerDay = workDays > 0 ? (totalHours / workDays) : 0;
+                
+                // Calculate Overtime: Summing positive 'diffHours'
+                const overtimeHours = rawData.reduce((sum, item) => {
+                    const diff = item.diffHours || 0;
+                    return sum + (diff > 0 ? diff : 0);
+                }, 0);
 
-            const entries = Array.isArray(data.entries) ? data.entries : [];
-            setTimeEntries(entries);
+                setHoursData({
+                    totalHours: parseFloat(totalHours.toFixed(2)),
+                    workDays: workDays,
+                    avgHoursPerDay: parseFloat(avgHoursPerDay.toFixed(2)),
+                    overtimeHours: parseFloat(overtimeHours.toFixed(2))
+                });
+
+                // 2. Map Raw Data to UI Format
+                const formattedEntries = rawData.map(item => ({
+                    date: item.Date,
+                    clockIn: formatTime(item['Clock In']),
+                    clockOut: formatTime(item['Clock Out']),
+                    breakTime: item['Break Duration'] ? `${item['Break Duration']} min` : '0 min',
+                    totalHours: item.actualHours?.toFixed(2) || '0.00',
+                    notes: item.shiftName || '' // Using shiftName as note
+                }));
+
+                // Sort by Date (Newest first)
+                formattedEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                setTimeEntries(formattedEntries);
+            } else {
+                // Fallback if response is empty or not an array
+                setHoursData({ totalHours: 0, workDays: 0, avgHoursPerDay: 0, overtimeHours: 0 });
+                setTimeEntries([]);
+            }
+
         } catch (error) {
             console.error('Error calculating hours:', error);
-            alert('Failed to calculate hours. Check console – likely a CORS issue from n8n.');
+            alert('Failed to fetch data.');
         } finally {
             setLoading(false);
         }
@@ -108,11 +147,11 @@ export default function StaffDashboard() {
         csv += `Average Hours per Day,${hoursData.avgHoursPerDay}\n`;
         csv += `Overtime Hours,${hoursData.overtimeHours}\n\n`;
 
-        csv += 'Date,Clock In,Clock Out,Break Time,Total Hours,Adjusted Hours,Notes\n';
+        csv += 'Date,Clock In,Clock Out,Break Time,Total Hours,Shift Type\n';
 
         const safeEntries = Array.isArray(timeEntries) ? timeEntries : [];
         safeEntries.forEach(entry => {
-            csv += `${entry.date},${entry.clockIn},${entry.clockOut},${entry.breakTime},${entry.totalHours},,\n`;
+            csv += `${entry.date},${entry.clockIn},${entry.clockOut},${entry.breakTime},${entry.totalHours},${entry.notes}\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -221,12 +260,10 @@ export default function StaffDashboard() {
                         >
                             {loading ? 'Calculating...' : 'Calculate Hours'}
                         </button>
-                        <button className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg">
-                            View Details
-                        </button>
-                        <button
-                            onClick={downloadCSVReport}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                        <button 
+                             onClick={downloadCSVReport}
+                             disabled={timeEntries.length === 0}
+                             className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
                         >
                             <Download className="w-5 h-5" />
                             Download Report (CSV)
@@ -277,76 +314,51 @@ export default function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* Employee Info Card */}
-                {selectedEmployee && getSelectedEmployeeData() && (
-                    <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 shadow-xl">
-                        <h2 className="text-xl font-semibold text-white mb-4">Employee Information</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Name</p>
-                                <p className="text-white font-medium text-lg">
-                                    {getSelectedEmployeeData().name}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Role</p>
-                                <p className="text-white font-medium text-lg">
-                                    {getSelectedEmployeeData().role}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Department</p>
-                                <p className="text-white font-medium text-lg">
-                                    {getSelectedEmployeeData().department}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Time Entries Table */}
                 <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 shadow-xl">
-                    <h2 className="text-xl font-semibold text-white mb-4">Recent Time Entries</h2>
+                    <h2 className="text-xl font-semibold text-white mb-4">Time Entries</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-slate-700">
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
-                                        Date
-                                    </th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
-                                        Clock In
-                                    </th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
-                                        Clock Out
-                                    </th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
-                                        Break
-                                    </th>
-                                    <th className="text-left text-slate-300 font-medium py-3 px-4">
-                                        Total Hours
-                                    </th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Date</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Clock In</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Clock Out</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Break</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Total Hours</th>
+                                    <th className="text-left text-slate-300 font-medium py-3 px-4">Shift</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {safeTimeEntries.map((entry, idx) => (
-                                    <tr
-                                        key={idx}
-                                        className={`${
-                                            idx < safeTimeEntries.length - 1
-                                                ? 'border-b border-slate-700/50'
-                                                : ''
-                                        } hover:bg-slate-700/30`}
-                                    >
-                                        <td className="py-3 px-4 text-white">{entry.date}</td>
-                                        <td className="py-3 px-4 text-slate-300">{entry.clockIn}</td>
-                                        <td className="py-3 px-4 text-slate-300">{entry.clockOut}</td>
-                                        <td className="py-3 px-4 text-slate-300">{entry.breakTime}</td>
-                                        <td className="py-3 px-4 text-emerald-400 font-semibold">
-                                            {entry.totalHours} hrs
+                                {safeTimeEntries.length > 0 ? (
+                                    safeTimeEntries.map((entry, idx) => (
+                                        <tr
+                                            key={idx}
+                                            className={`${
+                                                idx < safeTimeEntries.length - 1
+                                                    ? 'border-b border-slate-700/50'
+                                                    : ''
+                                            } hover:bg-slate-700/30`}
+                                        >
+                                            <td className="py-3 px-4 text-white">{entry.date}</td>
+                                            <td className="py-3 px-4 text-slate-300">{entry.clockIn}</td>
+                                            <td className="py-3 px-4 text-slate-300">{entry.clockOut}</td>
+                                            <td className="py-3 px-4 text-slate-300">{entry.breakTime}</td>
+                                            <td className="py-3 px-4 text-emerald-400 font-semibold">
+                                                {entry.totalHours} hrs
+                                            </td>
+                                            <td className="py-3 px-4 text-slate-400 text-sm">
+                                                {entry.notes}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="6" className="py-8 text-center text-slate-500">
+                                            No data available for selected period.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
