@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Clock, Calendar, TrendingUp, Search, Download, Target, Coffee, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Clock, Calendar, TrendingUp, Search, Download, Target, Coffee, AlertCircle, CheckCircle, XCircle, Banknote, BadgePercent } from 'lucide-react';
 
 export default function StaffDashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -21,22 +21,22 @@ export default function StaffDashboard() {
     
     const [timeEntries, setTimeEntries] = useState([]);
 
-    // 🔒 Static employees list - sorted alphabetically
+    // 🔒 Static employees list - Updated with Wage and Percentage
     const EMPLOYEES = [
-        { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General' },
-        { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General' },
-        { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General' },
-        { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General' },
-        { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General' },
-        { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General' },
-        { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General' },
-        { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General' },
-        { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General' },
-        { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General' },
-        { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General' },
-        { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General' },
-        { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General' },
-        { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General' },
+        { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General', wage: 175, percentage: 80 },
+        { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General', wage: 210, percentage: 100 },
+        { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General', wage: 215, percentage: 100 },
+        { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 170, percentage: 20 },
+        { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General', wage: 180, percentage: 100 },
+        { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General', wage: 160, percentage: 50 },
+        { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General', wage: 180, percentage: 80 },
+        { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General', wage: 185, percentage: 100 },
+        { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General', wage: 180, percentage: 60 },
+        { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General', wage: 180, percentage: 100 },
+        { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General', wage: 170, percentage: 40 },
+        { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General', wage: 185, percentage: 100 },
+        { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General', wage: 175, percentage: 50 },
+        { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General', wage: 175, percentage: 80 },
     ];
 
     const N8N_WEBHOOKS = {
@@ -463,6 +463,7 @@ export default function StaffDashboard() {
                 <tr>
                     <th>Employee Name</th>
                     <th>Role</th>
+                    <th>Wage</th>
                     <th class="text-right">Work Days</th>
                     <th class="text-right">Total Hours</th>
                     <th class="text-right">Planned</th>
@@ -479,6 +480,7 @@ export default function StaffDashboard() {
                     <tr>
                         <td><strong>${emp.name}</strong></td>
                         <td><span class="role-badge">${emp.role}</span></td>
+                        <td>${emp.wage} NOK</td>
                         <td class="text-right">${emp.stats.workDays}</td>
                         <td class="text-right"><strong>${emp.stats.totalHours.toFixed(1)}h</strong></td>
                         <td class="text-right">${emp.stats.totalPlannedHours}h</td>
@@ -491,7 +493,7 @@ export default function StaffDashboard() {
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="2"><strong>TOTALS</strong></td>
+                    <td colspan="3"><strong>TOTALS</strong></td>
                     <td class="text-right">${totals.workDays}</td>
                     <td class="text-right">${totals.totalHours.toFixed(1)}h</td>
                     <td class="text-right">${totals.totalPlannedHours.toFixed(1)}h</td>
@@ -758,6 +760,9 @@ export default function StaffDashboard() {
             <div class="header-right">
                 <div class="label">Role</div>
                 <div class="value">${selectedEmp?.role || 'N/A'}</div>
+                <div style="margin-top:5px; font-size: 11px; color:#64748b;">
+                   ${selectedEmp?.wage} NOK/h • ${selectedEmp?.percentage}%
+                </div>
             </div>
         </div>
         
@@ -835,13 +840,6 @@ export default function StaffDashboard() {
 
     const getSelectedEmployeeData = () =>
         EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
-
-    const getDifferenceColor = (diff) => {
-        const val = parseFloat(diff);
-        if (val > 0) return 'text-emerald-400';
-        if (val < 0) return 'text-rose-400';
-        return 'text-slate-400';
-    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-6">
@@ -964,20 +962,43 @@ export default function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* Employee Info Card */}
+                {/* Employee Info Card - UPDATED WITH WAGE AND PERCENTAGE */}
                 {selectedEmployee && getSelectedEmployeeData() && (
                     <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl md:text-2xl">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                            {/* Avatar */}
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg shrink-0">
                                 {getSelectedEmployeeData().name.charAt(0)}
                             </div>
+                            
+                            {/* Info */}
                             <div className="flex-1">
-                                <h3 className="text-xl md:text-2xl font-bold text-white">
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-1">
                                     {getSelectedEmployeeData().name}
                                 </h3>
-                                <p className="text-slate-400 text-sm md:text-base">
-                                    {getSelectedEmployeeData().role} • {getSelectedEmployeeData().department}
-                                </p>
+                                
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {/* Role & Dept */}
+                                    <p className="text-slate-400 text-sm md:text-base flex items-center gap-2 border-r border-slate-600 pr-3 mr-1">
+                                        {getSelectedEmployeeData().role} • {getSelectedEmployeeData().department}
+                                    </p>
+
+                                    {/* Wage Badge */}
+                                    <div className="flex items-center gap-1.5 bg-slate-700/50 px-2.5 py-1 rounded-md border border-slate-600/50">
+                                        <Banknote className="w-3.5 h-3.5 text-emerald-400" />
+                                        <span className="text-slate-200 text-xs font-medium">
+                                            {getSelectedEmployeeData().wage} NOK/h
+                                        </span>
+                                    </div>
+
+                                    {/* Percentage Badge */}
+                                    <div className="flex items-center gap-1.5 bg-slate-700/50 px-2.5 py-1 rounded-md border border-slate-600/50">
+                                        <BadgePercent className="w-3.5 h-3.5 text-blue-400" />
+                                        <span className="text-slate-200 text-xs font-medium">
+                                            {getSelectedEmployeeData().percentage}%
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
