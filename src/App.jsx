@@ -22,22 +22,23 @@ export default function StaffDashboard() {
     const [timeEntries, setTimeEntries] = useState([]);
 
     // 🔒 Static employees list - Updated with Wage and Percentage
-    const EMPLOYEES = [
-        { id: 14, name: 'Annabelle Cazals', role: 'Waiter', department: 'General', wage: 175, percentage: 80 },
-        { id: 9, name: 'Bohdan Zavhorodnii', role: 'Chef', department: 'General', wage: 210, percentage: 100 },
-        { id: 8, name: 'Elzbieta Karpinska', role: 'Chef', department: 'General', wage: 215, percentage: 100 },
-        { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 170, percentage: 20 },
-        { id: 12, name: 'Helene Göpfert', role: 'Waiter', department: 'General', wage: 180, percentage: 100 },
-        { id: 19, name: 'Joel Rimu Laurance', role: 'Helper', department: 'General', wage: 160, percentage: 50 },
-        { id: 15, name: 'Julia Gasser', role: 'Waiter', department: 'General', wage: 180, percentage: 80 },
-        { id: 10, name: 'Lotte Bruin', role: 'Waiter', department: 'General', wage: 185, percentage: 100 },
-        { id: 16, name: 'Marit Jonsdotter Gåsvatn', role: 'Waiter', department: 'General', wage: 180, percentage: 60 },
-        { id: 13, name: 'Michelle Pavan', role: 'Waiter', department: 'General', wage: 180, percentage: 100 },
-        { id: 17, name: 'Oliver heszlein-lossius.', role: 'Waiter', department: 'General', wage: 170, percentage: 40 },
-        { id: 11, name: 'Steffen Bjerk', role: 'Waiter', department: 'General', wage: 185, percentage: 100 },
-        { id: 21, name: 'Victoria Tamas', role: 'Waiter', department: 'General', wage: 175, percentage: 50 },
-        { id: 20, name: 'Yericka Italia Ruggeri', role: 'Waiter', department: 'General', wage: 175, percentage: 80 },
-    ];
+const EMPLOYEES = [
+    { id: 8,  name: 'Elzbieta Karpinska',          role: 'Chef',   department: 'General', wage: 240, percentage: 100 },
+    { id: 9,  name: 'Bohdan Zavhorodnii',          role: 'Chef',   department: 'General', wage: 215, percentage: 50 },
+    { id: 10, name: 'Lotte Bruin',                 role: 'Waiter', department: 'General', wage: 212, percentage: 60 },
+    { id: 11, name: 'Steffen Bjerk',               role: 'Waiter', department: 'General', wage: 205, percentage: 100 },
+    { id: 12, name: 'Helene Göpfert',              role: 'Waiter', department: 'General', wage: 215, percentage: 60 },
+    { id: 13, name: 'Michelle Pavan',              role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 14, name: 'Annabelle Cazals',            role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 15, name: 'Julia Gasser',                role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 16, name: 'Marit Jonsdotter Gåsvatn',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 17, name: 'Oliver heszlein-lossius.',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 19, name: 'Joel Rimu Laurance',          role: 'Helper', department: 'General', wage: 194, percentage: 20 },
+    { id: 20, name: 'Yericka Italia Ruggeri',      role: 'Waiter', department: 'General', wage: 205, percentage: 20 },
+    { id: 21, name: 'Victoria Tamas',              role: 'Waiter', department: 'General', wage: 194, percentage: 20 },
+];
+
 
     const N8N_WEBHOOKS = {
         calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
