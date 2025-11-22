@@ -539,7 +539,7 @@ export default function StaffDashboard() {
         // Create a new window with the report
         const printWindow = window.open('', '_blank');
         
-        const htmlContent = `
+                    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -556,7 +556,7 @@ export default function StaffDashboard() {
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 40px;
+            padding: 20px;
             max-width: 210mm;
             margin: 0 auto;
             background: #f5f5f5;
@@ -564,87 +564,77 @@ export default function StaffDashboard() {
         
         .report-container {
             background: white;
-            padding: 30px;
+            padding: 25px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
         }
         
-        .header h1 {
-            font-size: 24px;
+        .header-left h1 {
+            font-size: 18px;
             color: #1e293b;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
         
-        .header .subtitle {
+        .header-left .period {
             color: #64748b;
-            font-size: 14px;
+            font-size: 13px;
         }
         
-        .info-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
+        .header-right {
+            text-align: right;
         }
         
-        .info-box {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #2563eb;
-        }
-        
-        .info-box h3 {
-            font-size: 12px;
+        .header-right .label {
+            font-size: 11px;
             color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
         }
         
-        .info-box .value {
-            font-size: 16px;
+        .header-right .value {
+            font-size: 15px;
             color: #1e293b;
             font-weight: 600;
         }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
         }
         
         .stat-card {
             background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 6px;
             text-align: center;
             border: 1px solid #e2e8f0;
         }
         
         .stat-card .label {
-            font-size: 11px;
+            font-size: 10px;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .stat-card .value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #1e293b;
         }
         
         .stat-card .unit {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
             margin-top: 2px;
         }
@@ -666,22 +656,18 @@ export default function StaffDashboard() {
             color: #dc2626;
         }
         
-        .table-section {
-            margin-top: 30px;
-        }
-        
         .table-section h2 {
-            font-size: 16px;
+            font-size: 14px;
             color: #1e293b;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #e2e8f0;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 10px;
         }
         
         thead {
@@ -690,16 +676,16 @@ export default function StaffDashboard() {
         
         th {
             text-align: left;
-            padding: 10px 8px;
+            padding: 8px 6px;
             font-weight: 600;
             color: #475569;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 9px;
             letter-spacing: 0.3px;
         }
         
         td {
-            padding: 10px 8px;
+            padding: 8px 6px;
             border-bottom: 1px solid #e2e8f0;
             color: #334155;
         }
@@ -711,9 +697,9 @@ export default function StaffDashboard() {
         .shift-badge {
             background: #dbeafe;
             color: #1e40af;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
             font-weight: 600;
             display: inline-block;
         }
@@ -723,30 +709,30 @@ export default function StaffDashboard() {
         .diff-neutral { color: #64748b; }
         
         .footer {
-            margin-top: 30px;
-            padding-top: 20px;
+            margin-top: 15px;
+            padding-top: 10px;
             border-top: 1px solid #e2e8f0;
             text-align: center;
             color: #64748b;
-            font-size: 11px;
+            font-size: 9px;
         }
         
         .no-print {
             text-align: center;
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: 15px;
+            padding: 15px;
         }
         
         .btn {
             background: #2563eb;
             color: white;
             border: none;
-            padding: 12px 30px;
+            padding: 10px 25px;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            margin: 0 10px;
+            margin: 0 8px;
         }
         
         .btn:hover {
@@ -765,26 +751,13 @@ export default function StaffDashboard() {
 <body>
     <div class="report-container">
         <div class="header">
-            <h1>Staff Hours Report</h1>
-            <div class="subtitle">${monthName} ${selectedYear}</div>
-        </div>
-        
-        <div class="info-section">
-            <div class="info-box">
-                <h3>Employee</h3>
-                <div class="value">${empName}</div>
+            <div class="header-left">
+                <h1>${empName}</h1>
+                <div class="period">${monthName} ${selectedYear}</div>
             </div>
-            <div class="info-box">
-                <h3>Role</h3>
+            <div class="header-right">
+                <div class="label">Role</div>
                 <div class="value">${selectedEmp?.role || 'N/A'}</div>
-            </div>
-            <div class="info-box">
-                <h3>Report Date</h3>
-                <div class="value">${currentDate}</div>
-            </div>
-            <div class="info-box">
-                <h3>Period</h3>
-                <div class="value">${monthName} ${selectedYear}</div>
             </div>
         </div>
         
@@ -806,16 +779,6 @@ export default function StaffDashboard() {
                 <div class="label">Work Days</div>
                 <div class="value">${stats.workDays}</div>
                 <div class="unit">days</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Avg Shift</div>
-                <div class="value">${stats.averageShiftDuration}</div>
-                <div class="unit">hours</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Breaks</div>
-                <div class="value">${stats.totalBreakHours}</div>
-                <div class="unit">hours</div>
             </div>
         </div>
         
@@ -854,7 +817,7 @@ export default function StaffDashboard() {
         </div>
         
         <div class="footer">
-            Generated by Staff Management System
+            Generated by Staff Management System • ${currentDate}
         </div>
     </div>
     
