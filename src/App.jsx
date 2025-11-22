@@ -212,18 +212,24 @@ const EMPLOYEES = [
                 return;
             }
 
-            // Calculate totals
+            // Calculate totals with real cost (base salary + AGA 14.1% + OTP 2% + Feriepenger 10.2%)
             const totals = employeesWithData.reduce((acc, emp) => {
-                const salary = emp.stats.totalHours * emp.wage;
+                const baseSalary = emp.stats.totalHours * emp.wage;
+                const aga = baseSalary * 0.141;
+                const otp = baseSalary * 0.02;
+                const feriepenger = baseSalary * 0.102;
+                const realCost = baseSalary + aga + otp + feriepenger;
+                
                 return {
                     totalHours: acc.totalHours + emp.stats.totalHours,
                     totalPlannedHours: acc.totalPlannedHours + emp.stats.totalPlannedHours,
                     overtimeHours: acc.overtimeHours + emp.stats.overtimeHours,
                     workDays: acc.workDays + emp.stats.workDays,
                     totalBreakHours: acc.totalBreakHours + emp.stats.totalBreakHours,
-                    totalSalary: acc.totalSalary + salary
+                    totalBaseSalary: acc.totalBaseSalary + baseSalary,
+                    totalRealCost: acc.totalRealCost + realCost
                 };
-            }, { totalHours: 0, totalPlannedHours: 0, overtimeHours: 0, workDays: 0, totalBreakHours: 0, totalSalary: 0 });
+            }, { totalHours: 0, totalPlannedHours: 0, overtimeHours: 0, workDays: 0, totalBreakHours: 0, totalBaseSalary: 0, totalRealCost: 0 });
 
             // Generate PDF
             const printWindow = window.open('', '_blank');
@@ -445,19 +451,26 @@ const EMPLOYEES = [
                 <div class="unit">hours</div>
             </div>
             <div class="summary-card">
-                <div class="label">Planned Hours</div>
-                <div class="value">${totals.totalPlannedHours.toFixed(1)}</div>
-                <div class="unit">hours</div>
+                <div class="label">Base Salary Cost</div>
+                <div class="value">${totals.totalBaseSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
+                <div class="unit">NOK</div>
+            </div>
+            <div class="summary-card" style="background: #fee2e2; border-color: #ef4444;">
+                <div class="label">Real Cost (w/ taxes)</div>
+                <div class="value" style="color: #dc2626;">${totals.totalRealCost.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
+                <div class="unit">NOK</div>
             </div>
             <div class="summary-card ${totals.overtimeHours >= 0 ? 'positive' : 'negative'}">
                 <div class="label">Total Difference</div>
                 <div class="value">${totals.overtimeHours > 0 ? '+' : ''}${totals.overtimeHours.toFixed(1)}</div>
                 <div class="unit">hours</div>
             </div>
-            <div class="summary-card">
-                <div class="label">Total Salary Cost</div>
-                <div class="value">${totals.totalSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
-                <div class="unit">NOK</div>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Cost Breakdown Formula:</div>
+            <div style="font-size: 12px; color: #475569;">
+                Real Cost = Base Salary + AGA (14.1%) + OTP (2%) + Feriepenger (10.2%) = <strong>Base × 1.263</strong>
             </div>
         </div>
         
@@ -469,18 +482,23 @@ const EMPLOYEES = [
                     <th>Wage</th>
                     <th class="text-right">Work Days</th>
                     <th class="text-right">Total Hours</th>
-                    <th class="text-right">Planned</th>
                     <th class="text-right">Difference</th>
-                    <th class="text-right">Avg Shift</th>
-                    <th class="text-right">Break Time</th>
-                    <th class="text-right">Salary</th>
+                    <th class="text-right">Base Salary</th>
+                    <th class="text-right">AGA (14.1%)</th>
+                    <th class="text-right">OTP (2%)</th>
+                    <th class="text-right">Ferie (10.2%)</th>
+                    <th class="text-right">Real Cost</th>
                 </tr>
             </thead>
             <tbody>
                 ${employeesWithData.map(emp => {
                     const diff = emp.stats.overtimeHours;
                     const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
-                    const salary = emp.stats.totalHours * emp.wage;
+                    const baseSalary = emp.stats.totalHours * emp.wage;
+                    const aga = baseSalary * 0.141;
+                    const otp = baseSalary * 0.02;
+                    const feriepenger = baseSalary * 0.102;
+                    const realCost = baseSalary + aga + otp + feriepenger;
                     return `
                     <tr>
                         <td><strong>${emp.name}</strong></td>
@@ -488,25 +506,26 @@ const EMPLOYEES = [
                         <td>${emp.wage} NOK</td>
                         <td class="text-right">${emp.stats.workDays}</td>
                         <td class="text-right"><strong>${emp.stats.totalHours.toFixed(1)}h</strong></td>
-                        <td class="text-right">${emp.stats.totalPlannedHours}h</td>
                         <td class="text-right ${diffClass}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}h</td>
-                        <td class="text-right">${emp.stats.averageShiftDuration}h</td>
-                        <td class="text-right">${emp.stats.totalBreakHours}h</td>
-                        <td class="text-right"><strong>${salary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
+                        <td class="text-right">${baseSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</td>
+                        <td class="text-right" style="color: #64748b;">${aga.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                        <td class="text-right" style="color: #64748b;">${otp.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                        <td class="text-right" style="color: #64748b;">${feriepenger.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                        <td class="text-right"><strong style="color: #dc2626;">${realCost.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
                     </tr>
                     `;
                 }).join('')}
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3"><strong>TOTALS</strong></td>
-                    <td class="text-right">${totals.workDays}</td>
+                    <td colspan="4"><strong>TOTALS</strong></td>
                     <td class="text-right">${totals.totalHours.toFixed(1)}h</td>
-                    <td class="text-right">${totals.totalPlannedHours.toFixed(1)}h</td>
                     <td class="text-right ${totals.overtimeHours >= 0 ? 'positive' : 'negative'}">${totals.overtimeHours > 0 ? '+' : ''}${totals.overtimeHours.toFixed(1)}h</td>
-                    <td class="text-right">-</td>
-                    <td class="text-right">${totals.totalBreakHours.toFixed(1)}h</td>
-                    <td class="text-right"><strong>${totals.totalSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
+                    <td class="text-right"><strong>${totals.totalBaseSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
+                    <td class="text-right" style="color: #64748b;">${(totals.totalBaseSalary * 0.141).toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                    <td class="text-right" style="color: #64748b;">${(totals.totalBaseSalary * 0.02).toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                    <td class="text-right" style="color: #64748b;">${(totals.totalBaseSalary * 0.102).toLocaleString('nb-NO', {maximumFractionDigits: 0})}</td>
+                    <td class="text-right"><strong style="color: #dc2626;">${totals.totalRealCost.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -544,6 +563,14 @@ const EMPLOYEES = [
             month: 'long', 
             day: 'numeric'
         });
+
+        // Calculate salary costs
+        const totalHoursNumeric = parseFloat(stats.totalHoursFormatted.replace(' hrs ', '.').replace(' min', '')) || 0;
+        const baseSalary = totalHoursNumeric * (selectedEmp?.wage || 0);
+        const aga = baseSalary * 0.141;
+        const otp = baseSalary * 0.02;
+        const feriepenger = baseSalary * 0.102;
+        const realCost = baseSalary + aga + otp + feriepenger;
 
         // Create a new window with the report
         const printWindow = window.open('', '_blank');
@@ -779,18 +806,27 @@ const EMPLOYEES = [
                 <div class="value">${stats.totalHoursFormatted}</div>
             </div>
             <div class="stat-card">
-                <div class="label">Planned</div>
-                <div class="value">${stats.totalPlannedHours}</div>
-                <div class="unit">hours</div>
+                <div class="label">Base Salary</div>
+                <div class="value">${baseSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
+                <div class="unit">NOK</div>
+            </div>
+            <div class="stat-card" style="background: #fee2e2; border: 1px solid #fecaca;">
+                <div class="label">Real Cost</div>
+                <div class="value" style="color: #dc2626;">${realCost.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
+                <div class="unit">NOK (w/ taxes)</div>
             </div>
             <div class="stat-card ${stats.overtimeHours >= 0 ? 'positive' : 'negative'}">
                 <div class="label">Difference</div>
                 <div class="value">${stats.overtimeHours > 0 ? '+' : ''}${stats.overtimeHours}h</div>
             </div>
-            <div class="stat-card">
-                <div class="label">Work Days</div>
-                <div class="value">${stats.workDays}</div>
-                <div class="unit">days</div>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 9px; color: #64748b; margin-bottom: 6px; text-transform: uppercase; font-weight: 600;">Cost Breakdown:</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10px; color: #475569;">
+                <div>AGA (14.1%): <strong>${aga.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></div>
+                <div>OTP (2%): <strong>${otp.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></div>
+                <div>Feriepenger (10.2%): <strong>${feriepenger.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></div>
             </div>
         </div>
         
