@@ -213,15 +213,17 @@ const EMPLOYEES = [
             }
 
             // Calculate totals
-            const totals = employeesWithData.reduce((acc, emp) => ({
-                totalHours: acc.totalHours + emp.stats.totalHours,
-                totalPlannedHours: acc.totalPlannedHours + emp.stats.totalPlannedHours,
-                overtimeHours: acc.overtimeHours + emp.stats.overtimeHours,
-                workDays: acc.workDays + emp.stats.workDays,
-                totalBreakHours: acc.totalBreakHours + emp.stats.totalBreakHours
-            }), { totalHours: 0, totalPlannedHours: 0, overtimeHours: 0, workDays: 0, totalBreakHours: 0 });
-
-            const avgHoursPerEmployee = (totals.totalHours / employeesWithData.length).toFixed(1);
+            const totals = employeesWithData.reduce((acc, emp) => {
+                const salary = emp.stats.totalHours * emp.wage;
+                return {
+                    totalHours: acc.totalHours + emp.stats.totalHours,
+                    totalPlannedHours: acc.totalPlannedHours + emp.stats.totalPlannedHours,
+                    overtimeHours: acc.overtimeHours + emp.stats.overtimeHours,
+                    workDays: acc.workDays + emp.stats.workDays,
+                    totalBreakHours: acc.totalBreakHours + emp.stats.totalBreakHours,
+                    totalSalary: acc.totalSalary + salary
+                };
+            }, { totalHours: 0, totalPlannedHours: 0, overtimeHours: 0, workDays: 0, totalBreakHours: 0, totalSalary: 0 });
 
             // Generate PDF
             const printWindow = window.open('', '_blank');
@@ -453,9 +455,9 @@ const EMPLOYEES = [
                 <div class="unit">hours</div>
             </div>
             <div class="summary-card">
-                <div class="label">Avg per Employee</div>
-                <div class="value">${avgHoursPerEmployee}</div>
-                <div class="unit">hours</div>
+                <div class="label">Total Salary Cost</div>
+                <div class="value">${totals.totalSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})}</div>
+                <div class="unit">NOK</div>
             </div>
         </div>
         
@@ -471,12 +473,14 @@ const EMPLOYEES = [
                     <th class="text-right">Difference</th>
                     <th class="text-right">Avg Shift</th>
                     <th class="text-right">Break Time</th>
+                    <th class="text-right">Salary</th>
                 </tr>
             </thead>
             <tbody>
                 ${employeesWithData.map(emp => {
                     const diff = emp.stats.overtimeHours;
                     const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+                    const salary = emp.stats.totalHours * emp.wage;
                     return `
                     <tr>
                         <td><strong>${emp.name}</strong></td>
@@ -488,6 +492,7 @@ const EMPLOYEES = [
                         <td class="text-right ${diffClass}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}h</td>
                         <td class="text-right">${emp.stats.averageShiftDuration}h</td>
                         <td class="text-right">${emp.stats.totalBreakHours}h</td>
+                        <td class="text-right"><strong>${salary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
                     </tr>
                     `;
                 }).join('')}
@@ -501,6 +506,7 @@ const EMPLOYEES = [
                     <td class="text-right ${totals.overtimeHours >= 0 ? 'positive' : 'negative'}">${totals.overtimeHours > 0 ? '+' : ''}${totals.overtimeHours.toFixed(1)}h</td>
                     <td class="text-right">-</td>
                     <td class="text-right">${totals.totalBreakHours.toFixed(1)}h</td>
+                    <td class="text-right"><strong>${totals.totalSalary.toLocaleString('nb-NO', {maximumFractionDigits: 0})} NOK</strong></td>
                 </tr>
             </tfoot>
         </table>
