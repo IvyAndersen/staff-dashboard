@@ -21,13 +21,27 @@ export default function StaffDashboard() {
     
     const [timeEntries, setTimeEntries] = useState([]);
 
-    // Employees state - will be fetched from Airtable via n8n
-    const [employees, setEmployees] = useState([]);
-    const [loadingEmployees, setLoadingEmployees] = useState(false);
+    // 🔒 Static employees list - Updated with Wage and Percentage
+const EMPLOYEES = [
+    { id: 8,  name: 'Elzbieta Karpinska',          role: 'Chef',   department: 'General', wage: 240, percentage: 100 },
+    { id: 9,  name: 'Bohdan Zavhorodnii',          role: 'Chef',   department: 'General', wage: 215, percentage: 50 },
+    { id: 10, name: 'Lotte Bruin',                 role: 'Waiter', department: 'General', wage: 212, percentage: 60 },
+    { id: 11, name: 'Steffen Bjerk',               role: 'Waiter', department: 'General', wage: 205, percentage: 100 },
+    { id: 12, name: 'Helene Göpfert',              role: 'Waiter', department: 'General', wage: 215, percentage: 60 },
+    { id: 13, name: 'Michelle Pavan',              role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 14, name: 'Annabelle Cazals',            role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 15, name: 'Julia Gasser',                role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 16, name: 'Marit Jonsdotter Gåsvatn',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 17, name: 'Oliver heszlein-lossius.',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+    { id: 19, name: 'Joel Rimu Laurance',          role: 'Helper', department: 'General', wage: 194, percentage: 20 },
+    { id: 20, name: 'Yericka Italia Ruggeri',      role: 'Waiter', department: 'General', wage: 205, percentage: 20 },
+    { id: 21, name: 'Victoria Tamas',              role: 'Waiter', department: 'General', wage: 194, percentage: 20 },
+];
+
 
     const N8N_WEBHOOKS = {
-        calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours',
-        getEmployees: 'https://primary-production-191cf.up.railway.app/webhook/Get_Employees'
+        calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
     };
 
     const months = [
@@ -50,66 +64,6 @@ export default function StaffDashboard() {
         if (!str) return '0 hrs 0 min';
         return str.replace('hours', 'hrs').replace('minutes', 'min');
     };
-
-    // Fetch employees from Airtable via n8n
-    const fetchEmployees = async () => {
-        setLoadingEmployees(true);
-        try {
-            const response = await fetch(N8N_WEBHOOKS.getEmployees, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (!response.ok) throw new Error(`Server error: ${response.status}`);
-
-            const data = await response.json();
-            console.log("📦 Employees from Airtable:", data);
-            
-            // Map the data to match our expected format
-            const mappedEmployees = data.map(emp => ({
-                id: emp.id || emp.Staff_ID,
-                name: emp.Name || emp.name,
-                role: emp.Roll || emp.role || 'Staff',
-                department: 'General',
-                wage: parseFloat(emp.Wage_Rate || emp.wage || 0),
-                percentage: parseFloat(emp['%'] || emp.percentage || 100),
-                email: emp.Email || emp.email || '',
-                phone: emp.Phone || emp.phone || '',
-                startDate: emp.Start_Date || emp.startDate || '',
-                active: emp.Active !== false
-            }));
-
-            setEmployees(mappedEmployees.filter(emp => emp.active));
-        } catch (error) {
-            console.error('Error fetching employees:', error);
-            setError('Failed to load employees. Please refresh the page.');
-        } finally {
-            setLoadingEmployees(false);
-        }
-    };
-
-    // Calculate years of service
-    const calculateYearsOfService = (startDate) => {
-        if (!startDate) return 'N/A';
-        try {
-            const start = new Date(startDate);
-            const now = new Date();
-            const years = (now - start) / (1000 * 60 * 60 * 24 * 365.25);
-            
-            if (years < 1) {
-                const months = Math.floor(years * 12);
-                return `${months} month${months !== 1 ? 's' : ''}`;
-            }
-            return `${years.toFixed(1)} years`;
-        } catch (e) {
-            return 'N/A';
-        }
-    };
-
-    // Load employees on component mount
-    React.useEffect(() => {
-        fetchEmployees();
-    }, []);
 
     const calculateHours = async () => {
         if (!selectedEmployee || !selectedMonth || !selectedYear) {
@@ -134,7 +88,7 @@ export default function StaffDashboard() {
         try {
             const startDate = new Date(selectedYear, selectedMonth - 1, 1).toISOString().split('T')[0];
             const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
-            const empObj = employees.find(e => String(e.id) === String(selectedEmployee));
+            const empObj = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
 
             const response = await fetch(N8N_WEBHOOKS.calculateHours, {
                 method: 'POST',
@@ -209,7 +163,7 @@ export default function StaffDashboard() {
 
             // Fetch data for all employees
             const allEmployeeData = await Promise.all(
-                employees.map(async (emp) => {
+                EMPLOYEES.map(async (emp) => {
                     try {
                         const response = await fetch(N8N_WEBHOOKS.calculateHours, {
                             method: 'POST',
@@ -601,7 +555,7 @@ export default function StaffDashboard() {
     };
 
     const downloadPDFReport = () => {
-        const selectedEmp = employees.find(e => String(e.id) === String(selectedEmployee));
+        const selectedEmp = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
         const empName = selectedEmp ? selectedEmp.name : 'Unknown';
         const monthName = months[parseInt(selectedMonth) - 1];
         const currentDate = new Date().toLocaleDateString('en-US', { 
@@ -928,7 +882,7 @@ export default function StaffDashboard() {
     };
 
     const getSelectedEmployeeData = () =>
-        employees.find(e => String(e.id) === String(selectedEmployee));
+        EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-6">
@@ -958,10 +912,9 @@ export default function StaffDashboard() {
                                 value={selectedEmployee}
                                 onChange={(e) => setSelectedEmployee(e.target.value)}
                                 className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                                disabled={loadingEmployees}
                             >
-                                <option value="">{loadingEmployees ? 'Loading employees...' : 'Select Employee...'}</option>
-                                {employees.map(emp => (
+                                <option value="">Select Employee...</option>
+                                {EMPLOYEES.map(emp => (
                                     <option key={emp.id} value={emp.id}>
                                         {emp.name} ({emp.role})
                                     </option>
@@ -1052,10 +1005,10 @@ export default function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* Employee Info Card - WITH ADDITIONAL INFO */}
+                {/* Employee Info Card - UPDATED WITH WAGE AND PERCENTAGE */}
                 {selectedEmployee && getSelectedEmployeeData() && (
                     <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
-                        <div className="flex flex-col md:flex-row md:items-start gap-4">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
                             {/* Avatar */}
                             <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg shrink-0">
                                 {getSelectedEmployeeData().name.charAt(0)}
@@ -1067,7 +1020,7 @@ export default function StaffDashboard() {
                                     {getSelectedEmployeeData().name}
                                 </h3>
                                 
-                                <div className="flex flex-wrap items-center gap-3 mb-4">
+                                <div className="flex flex-wrap items-center gap-3">
                                     {/* Role & Dept */}
                                     <p className="text-slate-400 text-sm md:text-base flex items-center gap-2 border-r border-slate-600 pr-3 mr-1">
                                         {getSelectedEmployeeData().role} • {getSelectedEmployeeData().department}
@@ -1088,75 +1041,6 @@ export default function StaffDashboard() {
                                             {getSelectedEmployeeData().percentage}%
                                         </span>
                                     </div>
-                                </div>
-
-                                {/* Additional Employee Details */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                    {/* Email */}
-                                    {getSelectedEmployeeData().email && (
-                                        <a 
-                                            href={`mailto:${getSelectedEmployeeData().email}`}
-                                            className="flex items-center gap-2 bg-slate-700/30 px-3 py-2 rounded-lg hover:bg-slate-700/50 transition-colors group"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
-                                                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs text-slate-400">Email</p>
-                                                <p className="text-sm text-slate-200 truncate">{getSelectedEmployeeData().email}</p>
-                                            </div>
-                                        </a>
-                                    )}
-
-                                    {/* Phone */}
-                                    {getSelectedEmployeeData().phone && (
-                                        <a 
-                                            href={`tel:${getSelectedEmployeeData().phone}`}
-                                            className="flex items-center gap-2 bg-slate-700/30 px-3 py-2 rounded-lg hover:bg-slate-700/50 transition-colors group"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-                                                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs text-slate-400">Phone</p>
-                                                <p className="text-sm text-slate-200">{getSelectedEmployeeData().phone}</p>
-                                            </div>
-                                        </a>
-                                    )}
-
-                                    {/* Start Date */}
-                                    {getSelectedEmployeeData().startDate && (
-                                        <div className="flex items-center gap-2 bg-slate-700/30 px-3 py-2 rounded-lg">
-                                            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs text-slate-400">Start Date</p>
-                                                <p className="text-sm text-slate-200">{new Date(getSelectedEmployeeData().startDate).toLocaleDateString('en-GB')}</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Years of Service */}
-                                    {getSelectedEmployeeData().startDate && (
-                                        <div className="flex items-center gap-2 bg-slate-700/30 px-3 py-2 rounded-lg">
-                                            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs text-slate-400">Service</p>
-                                                <p className="text-sm text-slate-200">{calculateYearsOfService(getSelectedEmployeeData().startDate)}</p>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
