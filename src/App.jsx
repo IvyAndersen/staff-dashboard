@@ -53,14 +53,33 @@ export default function StaffDashboard() {
 
     const years = ['2024', '2025', '2026'];
 
-    // ✅ Helper to get month range without timezone/ISO issues
+    // ✅ Helper to get month range WITHOUT using Date (no timezone issues)
     // monthStr is "1"–"12"
     const getMonthRange = (yearStr, monthStr) => {
         const year = Number(yearStr);
         const month = Number(monthStr); // 1–12
 
-        // Last day of this month in local time
-        const lastDay = new Date(year, month, 0).getDate();
+        // Leap year check
+        const isLeapYear =
+            (year % 4 === 0 && year % 100 !== 0) ||
+            (year % 400 === 0);
+
+        const daysInMonth = [
+            31,
+            isLeapYear ? 29 : 28,
+            31,
+            30,
+            31,
+            30,
+            31,
+            31,
+            30,
+            31,
+            30,
+            31,
+        ];
+
+        const lastDay = daysInMonth[month - 1];
 
         const pad = (n) => String(n).padStart(2, '0');
 
@@ -109,9 +128,22 @@ export default function StaffDashboard() {
         setTimeEntries([]);
 
         try {
-            // ✅ use helper so December = 2025-12-01 to 2025-12-31
+            // ✅ Use helper so November = 2025-11-01 to 2025-11-30
             const { startDate, endDate } = getMonthRange(selectedYear, selectedMonth);
             const empObj = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
+
+            const monthNumber = Number(selectedMonth);
+            const yearNumber = Number(selectedYear);
+            const monthName = months[monthNumber - 1];
+
+            console.log('Sending to n8n (single employee):', {
+                employeeId: selectedEmployee,
+                startDate,
+                endDate,
+                monthNumber,
+                yearNumber,
+                monthName,
+            });
 
             const response = await fetch(N8N_WEBHOOKS.calculateHours, {
                 method: 'POST',
@@ -120,7 +152,10 @@ export default function StaffDashboard() {
                     employeeId: selectedEmployee,
                     employeeName: empObj ? empObj.name : '',
                     startDate,
-                    endDate
+                    endDate,
+                    month: monthNumber,
+                    year: yearNumber,
+                    monthName,
                 })
             });
 
@@ -182,7 +217,17 @@ export default function StaffDashboard() {
         try {
             // ✅ use same helper here
             const { startDate, endDate } = getMonthRange(selectedYear, selectedMonth);
-            const monthName = months[parseInt(selectedMonth) - 1];
+            const monthNumber = Number(selectedMonth);
+            const yearNumber = Number(selectedYear);
+            const monthName = months[monthNumber - 1];
+
+            console.log('Sending to n8n (monthly report):', {
+                startDate,
+                endDate,
+                monthNumber,
+                yearNumber,
+                monthName,
+            });
 
             // Fetch data for all employees
             const allEmployeeData = await Promise.all(
@@ -195,7 +240,10 @@ export default function StaffDashboard() {
                                 employeeId: emp.id,
                                 employeeName: emp.name,
                                 startDate,
-                                endDate
+                                endDate,
+                                month: monthNumber,
+                                year: yearNumber,
+                                monthName,
                             })
                         });
 
@@ -596,7 +644,9 @@ export default function StaffDashboard() {
         });
 
         // Calculate salary costs
-        const totalHoursNumeric = parseFloat(stats.totalHoursFormatted.replace(' hrs ', '.').replace(' min', '')) || 0;
+        const totalHoursNumeric = parseFloat(
+            stats.totalHoursFormatted.replace(' hrs ', '.').replace(' min', '')
+        ) || 0;
         const baseSalary = totalHoursNumeric * (selectedEmp?.wage || 0);
         const aga = baseSalary * 0.141;
         const otp = baseSalary * 0.02;
@@ -927,7 +977,7 @@ export default function StaffDashboard() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx_auto space-y-6">
                 
                 {/* Input Section */}
                 <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
