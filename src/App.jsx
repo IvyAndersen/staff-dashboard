@@ -22,23 +22,22 @@ export default function StaffDashboard() {
     const [timeEntries, setTimeEntries] = useState([]);
 
     // 🔒 Static employees list - Updated with Wage and Percentage
-const EMPLOYEES = [
-    { id: 8,  name: 'Elzbieta Karpinska',          role: 'Chef',   department: 'General', wage: 240, percentage: 100 },
-    { id: 9,  name: 'Bohdan Zavhorodnii',          role: 'Chef',   department: 'General', wage: 215, percentage: 50 },
-    { id: 10, name: 'Lotte Bruin',                 role: 'Waiter', department: 'General', wage: 212, percentage: 60 },
-    { id: 11, name: 'Steffen Bjerk',               role: 'Waiter', department: 'General', wage: 205, percentage: 100 },
-    { id: 12, name: 'Helene Göpfert',              role: 'Waiter', department: 'General', wage: 215, percentage: 60 },
-    { id: 13, name: 'Michelle Pavan',              role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 14, name: 'Annabelle Cazals',            role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 15, name: 'Julia Gasser',                role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 16, name: 'Marit Jonsdotter Gåsvatn',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 17, name: 'Oliver heszlein-lossius.',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
-    { id: 19, name: 'Joel Rimu Laurance',          role: 'Helper', department: 'General', wage: 194, percentage: 20 },
-    { id: 20, name: 'Yericka Italia Ruggeri',      role: 'Waiter', department: 'General', wage: 205, percentage: 20 },
-    { id: 21, name: 'Victoria Tamas',              role: 'Waiter', department: 'General', wage: 194, percentage: 20 },
-];
-
+    const EMPLOYEES = [
+        { id: 8,  name: 'Elzbieta Karpinska',          role: 'Chef',   department: 'General', wage: 240, percentage: 100 },
+        { id: 9,  name: 'Bohdan Zavhorodnii',          role: 'Chef',   department: 'General', wage: 215, percentage: 50 },
+        { id: 10, name: 'Lotte Bruin',                 role: 'Waiter', department: 'General', wage: 212, percentage: 60 },
+        { id: 11, name: 'Steffen Bjerk',               role: 'Waiter', department: 'General', wage: 205, percentage: 100 },
+        { id: 12, name: 'Helene Göpfert',              role: 'Waiter', department: 'General', wage: 215, percentage: 60 },
+        { id: 13, name: 'Michelle Pavan',              role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 14, name: 'Annabelle Cazals',            role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 15, name: 'Julia Gasser',                role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 16, name: 'Marit Jonsdotter Gåsvatn',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 17, name: 'Oliver heszlein-lossius.',    role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 18, name: 'Gustav James Myklestad Barrett', role: 'Waiter', department: 'General', wage: 205, percentage: 40 },
+        { id: 19, name: 'Joel Rimu Laurance',          role: 'Helper', department: 'General', wage: 194, percentage: 20 },
+        { id: 20, name: 'Yericka Italia Ruggeri',      role: 'Waiter', department: 'General', wage: 205, percentage: 20 },
+        { id: 21, name: 'Victoria Tamas',              role: 'Waiter', department: 'General', wage: 194, percentage: 20 },
+    ];
 
     const N8N_WEBHOOKS = {
         calculateHours: 'https://primary-production-191cf.up.railway.app/webhook/Calculate_Hours'
@@ -50,6 +49,22 @@ const EMPLOYEES = [
     ];
 
     const years = ['2024', '2025', '2026'];
+
+    // ✅ Helper to get month range without timezone/ISO issues
+    const getMonthRange = (yearStr, monthStr) => {
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10); // 1–12
+
+        // last day of this month in local time
+        const lastDay = new Date(year, month, 0).getDate();
+        const mm = String(month).padStart(2, '0');
+        const ddEnd = String(lastDay).padStart(2, '0');
+
+        return {
+            startDate: `${year}-${mm}-01`,
+            endDate: `${year}-${mm}-${ddEnd}`,
+        };
+    };
 
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
@@ -86,8 +101,8 @@ const EMPLOYEES = [
         setTimeEntries([]);
 
         try {
-            const startDate = new Date(selectedYear, selectedMonth - 1, 1).toISOString().split('T')[0];
-            const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+            // ✅ use helper so November = 2025-11-01 to 2025-11-30
+            const { startDate, endDate } = getMonthRange(selectedYear, selectedMonth);
             const empObj = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
 
             const response = await fetch(N8N_WEBHOOKS.calculateHours, {
@@ -157,8 +172,8 @@ const EMPLOYEES = [
         setError('');
 
         try {
-            const startDate = new Date(selectedYear, selectedMonth - 1, 1).toISOString().split('T')[0];
-            const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+            // ✅ use same helper here
+            const { startDate, endDate } = getMonthRange(selectedYear, selectedMonth);
             const monthName = months[parseInt(selectedMonth) - 1];
 
             // Fetch data for all employees
@@ -575,7 +590,7 @@ const EMPLOYEES = [
         // Create a new window with the report
         const printWindow = window.open('', '_blank');
         
-                    const htmlContent = `
+        const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
