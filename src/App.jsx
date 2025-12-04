@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Users, Clock, Calendar, TrendingUp, Search, Download, Target, Coffee, AlertCircle, CheckCircle, XCircle, Banknote, BadgePercent } from 'lucide-react';
+import { 
+    Users, Clock, Calendar, TrendingUp, Search, Download, Target, Coffee, 
+    AlertCircle, CheckCircle, XCircle, Banknote, BadgePercent 
+} from 'lucide-react';
 
 export default function StaffDashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -51,25 +54,30 @@ export default function StaffDashboard() {
     const years = ['2024', '2025', '2026'];
 
     // ✅ Helper to get month range without timezone/ISO issues
+    // monthStr is "1"–"12"
     const getMonthRange = (yearStr, monthStr) => {
-        const year = parseInt(yearStr, 10);
-        const month = parseInt(monthStr, 10); // 1–12
+        const year = Number(yearStr);
+        const month = Number(monthStr); // 1–12
 
-        // last day of this month in local time
+        // Last day of this month in local time
         const lastDay = new Date(year, month, 0).getDate();
-        const mm = String(month).padStart(2, '0');
-        const ddEnd = String(lastDay).padStart(2, '0');
+
+        const pad = (n) => String(n).padStart(2, '0');
 
         return {
-            startDate: `${year}-${mm}-01`,
-            endDate: `${year}-${mm}-${ddEnd}`,
+            startDate: `${year}-${pad(month)}-01`,
+            endDate: `${year}-${pad(month)}-${pad(lastDay)}`,
         };
     };
 
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
         try {
-            return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            return new Date(isoString).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: false 
+            });
         } catch (e) {
             return isoString;
         }
@@ -101,7 +109,7 @@ export default function StaffDashboard() {
         setTimeEntries([]);
 
         try {
-            // ✅ use helper so November = 2025-11-01 to 2025-11-30
+            // ✅ use helper so December = 2025-12-01 to 2025-12-31
             const { startDate, endDate } = getMonthRange(selectedYear, selectedMonth);
             const empObj = EMPLOYEES.find(e => String(e.id) === String(selectedEmployee));
 
@@ -244,7 +252,15 @@ export default function StaffDashboard() {
                     totalBaseSalary: acc.totalBaseSalary + baseSalary,
                     totalRealCost: acc.totalRealCost + realCost
                 };
-            }, { totalHours: 0, totalPlannedHours: 0, overtimeHours: 0, workDays: 0, totalBreakHours: 0, totalBaseSalary: 0, totalRealCost: 0 });
+            }, { 
+                totalHours: 0, 
+                totalPlannedHours: 0, 
+                overtimeHours: 0, 
+                workDays: 0, 
+                totalBreakHours: 0, 
+                totalBaseSalary: 0, 
+                totalRealCost: 0 
+            });
 
             // Generate PDF
             const printWindow = window.open('', '_blank');
@@ -1020,7 +1036,7 @@ export default function StaffDashboard() {
                     </div>
                 </div>
 
-                {/* Employee Info Card - UPDATED WITH WAGE AND PERCENTAGE */}
+                {/* Employee Info Card */}
                 {selectedEmployee && getSelectedEmployeeData() && (
                     <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
                         <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -1179,7 +1195,7 @@ export default function StaffDashboard() {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="py-12 text-center">
+                                        <td colSpan={8} className="py-12 text-center">
                                             <div className="flex flex-col items-center gap-3">
                                                 <Clock className="w-12 h-12 text-slate-600" />
                                                 <p className="text-slate-500 text-lg font-medium">
